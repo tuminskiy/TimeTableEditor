@@ -1,0 +1,332 @@
+﻿<Window x:Class="TimeTable.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        xmlns:localUtility="clr-namespace:TimeTable.Utility"
+        xmlns:localConverter="clr-namespace:TimeTable.Converter"
+        xmlns:localStyleSelector="clr-namespace:TimeTable.StyleSelector"
+        xmlns:properties="clr-namespace:TimeTable.Properties"
+        mc:Ignorable="d"
+        Title="Расписание занятий" Height="450" Width="800">
+    <Window.Resources>
+        <localConverter:WpfBitmapConverter x:Key="ImageConverter"/>
+        <localConverter:WpfDayOfWeekConverter x:Key="DayOfWeekConverter"/>
+        
+        <Style x:Key="ScheduleStudyGroupStyle" TargetType="{x:Type GroupItem}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate>
+                        <Expander Loaded="scheduleExpander_Loaded" Collapsed="scheduleExpander_Collapsed" Expanded="scheduleExpander_Expanded">
+                            <Expander.Header>
+                                <TextBlock Text="{Binding Name}"/>
+                            </Expander.Header>
+                            <ItemsPresenter Margin="20,0,0,0"/>
+                        </Expander>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <Style x:Key="DayOfWeekStyle" TargetType="{x:Type GroupItem}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate>
+                        <Expander Loaded="scheduleExpander_Loaded" Collapsed="scheduleExpander_Collapsed" Expanded="scheduleExpander_Expanded">
+                            <Expander.Header>
+                                <TextBlock Text="{Binding Name, Converter={StaticResource DayOfWeekConverter},
+                                        ConverterCulture='ru-RU'}"/>
+                            </Expander.Header>
+                            <ItemsPresenter Margin="-20,0,0,0"/>
+                        </Expander>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ChangesStudyGroupStyle" TargetType="{x:Type GroupItem}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate>
+                        <Expander Loaded="changeExpander_Loaded" Collapsed="changeExpander_Collapsed" Expanded="changeExpander_Expanded">
+                            <Expander.Header>
+                                <TextBlock Text="{Binding Name}"/>
+                            </Expander.Header>
+                            <ItemsPresenter Margin="20,0,0,0"/>
+                        </Expander>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DateStyle" TargetType="{x:Type GroupItem}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate>
+                        <Expander Loaded="changeExpander_Loaded" Collapsed="changeExpander_Collapsed" Expanded="changeExpander_Expanded">
+                            <Expander.Header>
+                                <TextBlock Text="{Binding Name, StringFormat='dd MMMM', ConverterCulture='ru-RU'}"/>
+                            </Expander.Header>
+                            <ItemsPresenter Margin="-20,0,0,0"/>
+                        </Expander>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <localStyleSelector:ScheduleGroupStyleSelector x:Key="ScheduleGroupStyleSelector" StudyGroupStyle="{StaticResource ScheduleStudyGroupStyle}"
+                                                       DayOfWeekStyle="{StaticResource DayOfWeekStyle}"/>
+
+        <localStyleSelector:ChangesGroupStyleSelector x:Key="ChangesGroupStyleSelector" StudyGroupStyle="{StaticResource ChangesStudyGroupStyle}"
+                                                      DateStyle="{StaticResource DateStyle}"/>
+    </Window.Resources>
+    
+    <Grid>
+        <TabControl>
+            <TabItem>
+                <TabItem.Header>
+                    <TextBlock>Расписание</TextBlock>
+                </TabItem.Header>
+                <TabItem.Content>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="30"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="30"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <Label Grid.Column="0">Фильтр:</Label>
+                            <TextBox Name="tbScheduleFilter" TextChanged="tbScheduleFilter_TextChanged" Grid.Column="1"/>
+                            <Button Name="bScheduleEdit" Click="bScheduleEdit_Click" Grid.Column="2">
+                                <Image>
+                                    <Image.Source>
+                                        <Binding Source="{x:Static properties:Resources.edit}" Converter="{StaticResource ImageConverter}"/>
+                                    </Image.Source>
+                                </Image>
+                            </Button>
+                            <Button Name="bScheduleEditCancel" Click="bScheduleEditCancel_Click" Visibility="Hidden" Grid.Column="2">
+                                <Image>
+                                    <Image.Source>
+                                        <Binding Source="{x:Static properties:Resources.cancel}" Converter="{StaticResource ImageConverter}"/>
+                                    </Image.Source>
+                                </Image>
+                            </Button>
+                        </Grid>
+
+                        <ListView Name="lvSchedule" ItemsSource="{Binding Model}" Grid.Row="1">
+                            <ListView.Resources>
+                                <ContextMenu x:Key="lvsContextMenu">
+                                    <MenuItem Header="Изменить" Click="scheduleItemEdit_Click"/>
+                                    <MenuItem Header="Удалить" Click="scheduleItemDelete_Click"/>
+                                </ContextMenu>
+                            </ListView.Resources>
+                            <ListView.GroupStyle>
+                                <GroupStyle ContainerStyleSelector="{StaticResource ScheduleGroupStyleSelector}"/>
+                            </ListView.GroupStyle>
+                            <ListView.ItemContainerStyle>
+                                <Style TargetType="ListViewItem">
+                                    <Setter Property="ContextMenu" Value="{StaticResource lvsContextMenu}"/>
+                                </Style>
+                            </ListView.ItemContainerStyle>
+                            <ListView.View>
+                                <GridView>
+                                    <GridViewColumn Header="№" DisplayMemberBinding="{Binding Id}"/>
+                                    <GridViewColumn Header="Время занятия" DisplayMemberBinding="{Binding LessonTime}"/>
+                                    <GridViewColumn Header="Дисциплина" DisplayMemberBinding="{Binding Lesson.Name}"/>
+                                    <GridViewColumn Header="Аудитория" DisplayMemberBinding="{Binding Classroom.Name}"/>
+                                    <GridViewColumn Header="Преподаватель" DisplayMemberBinding="{Binding Teacher.Name}"/>
+                                    <GridViewColumn Header="Доп. информация" DisplayMemberBinding="{Binding AdditionalInfo}"/>
+                                </GridView>
+                            </ListView.View>
+                        </ListView>
+
+                        <Grid Name="scheduleEditPanel" Visibility="Collapsed" Grid.Row="2">
+                            <Grid.RowDefinitions>
+                                <RowDefinition/>
+                                <RowDefinition/>
+                                <RowDefinition/>
+                                <RowDefinition/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0">День недели</Label>
+                            <ComboBox Name="cbsDayOfWeek" SelectedIndex="0" Grid.Row="0" Grid.Column="1">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Converter={StaticResource DayOfWeekConverter}, ConverterCulture='ru-RU'}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                                <ComboBox.ItemsSource>
+                                    <x:Array Type="sys:DayOfWeek">
+                                        <sys:DayOfWeek>1</sys:DayOfWeek>
+                                        <sys:DayOfWeek>2</sys:DayOfWeek>
+                                        <sys:DayOfWeek>3</sys:DayOfWeek>
+                                        <sys:DayOfWeek>4</sys:DayOfWeek>
+                                        <sys:DayOfWeek>5</sys:DayOfWeek>
+                                        <sys:DayOfWeek>6</sys:DayOfWeek>
+                                        <sys:DayOfWeek>0</sys:DayOfWeek>
+                                    </x:Array>
+                                </ComboBox.ItemsSource>
+                            </ComboBox>
+
+
+                            <Label Grid.Row="0" Grid.Column="2">Учебная группа</Label>
+                            <ComboBox Name="cbsStudyGroup" ItemsSource="{Binding Model}" IsEditable="True" StaysOpenOnEdit="True"
+                                      SelectedValuePath="Id" DisplayMemberPath="Name" Grid.Row="0" Grid.Column="3"/>
+
+                            <Label Grid.Row="0" Grid.Column="4">Время занятия</Label>
+                            <ComboBox Name="cbsLessonTime" ItemsSource="{Binding Model}" IsEditable="True" StaysOpenOnEdit="True"
+                                      SelectedValuePath="Id" Grid.Row="0" Grid.Column="5"/>
+
+                            <Label Grid.Row="1" Grid.Column="0">Дисциплина</Label>
+                            <ComboBox Name="cbsLesson" ItemsSource="{Binding Model}" IsEditable="True" StaysOpenOnEdit="True"
+                                      SelectedValuePath="Id" DisplayMemberPath="Name" Grid.Row="1" Grid.Column="1"/>
+
+                            <Label Grid.Row="1" Grid.Column="2">Аудитория</Label>
+                            <ComboBox Name="cbsClassroom" ItemsSource="{Binding Model}" IsEditable="True" StaysOpenOnEdit="True"
+                                      SelectedValuePath="Id" DisplayMemberPath="Name" Grid.Row="1" Grid.Column="3"/>
+
+                            <Label Grid.Row="1" Grid.Column="4">Преподаватель</Label>
+                            <ComboBox Name="cbsTeacher" ItemsSource="{Binding Model}" IsEditable="True" StaysOpenOnEdit="True"
+                                      SelectedValuePath="Id" DisplayMemberPath="Name" Grid.Row="1" Grid.Column="5"/>
+
+                            <Label Grid.Row="2" Grid.Column="0">Доп. информация</Label>
+                            <TextBox Name="tbsInfo" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="5"/>
+
+                            <Button Name="bScheduleAdd" Content="Добавить" Click="bScheduleAdd_Click" IsDefault="True" Grid.Row="3" Grid.Column="5"/>
+                            <Button Name="bScheduleEditConfirm" Content="Изменить" Click="bScheduleEditConfirm_Click" Visibility="Hidden" Grid.Row="3" Grid.Column="5"/>
+                        </Grid>
+                    </Grid>
+                </TabItem.Content>
+            </TabItem>
+
+            <TabItem>
+                <TabItem.Header>
+                    <TextBlock>Замены</TextBlock>
+                </TabItem.Header>
+                <TabItem.Content>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="30"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="30"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <Label Grid.Column="0">Фильтр:</Label>
+                            <TextBox Name="tbChangeFilter" TextChanged="tbChangeFilter_TextChanged" Grid.Column="1"></TextBox>
+                            <Button Name="bChangeEdit" Click="bChangeEdit_Click" Grid.Column="2">
+                                <Image>
+                                    <Image.Source>
+                                        <Binding Source="{x:Static properties:Resources.edit}" Converter="{StaticResource ImageConverter}"/>
+                                    </Image.Source>
+                                </Image>
+                            </Button>
+                            <Button Name="bChangeEditCancel" Click="bChangeEditCancel_Click" Visibility="Hidden" Grid.Column="2">
+                                <Image>
+                                    <Image.Source>
+                                        <Binding Source="{x:Static properties:Resources.cancel}" Converter="{StaticResource ImageConverter}"/>
+                                    </Image.Source>
+                                </Image>
+                            </Button>
+                        </Grid>
+
+                        <ListView Name="lvChanges" ItemsSource="{Binding Model}" Grid.Row="1">
+                            <ListView.Resources>
+                                <ContextMenu x:Key="lvcContextMenu">
+                                    <MenuItem Header="Изменить" Click="changeItemEdit_Click"/>
+                                    <MenuItem Header="Удалить" Click="changeItemDelete_Click"/>
+                                </ContextMenu>
+                            </ListView.Resources>
+                            <ListView.GroupStyle>
+                                <GroupStyle ContainerStyleSelector="{StaticResource ChangesGroupStyleSelector}"/>
+                            </ListView.GroupStyle>
+                            <ListView.ItemContainerStyle>
+                                <Style TargetType="ListViewItem">
+                                    <Setter Property="ContextMenu" Value="{StaticResource lvcContextMenu}"/>
+                                </Style>
+                            </ListView.ItemContainerStyle>
+                            <ListView.View>
+                                <GridView>
+                                    <GridViewColumn Header="№" DisplayMemberBinding="{Binding Id}"/>
+                                    <GridViewColumn Header="Время занятия" DisplayMemberBinding="{Binding LessonTime}"/>
+                                    <GridViewColumn Header="Дисциплина" DisplayMemberBinding="{Binding Lesson.Name}"/>
+                                    <GridViewColumn Header="Аудитория" DisplayMemberBinding="{Binding Classroom.Name}"/>
+                                    <GridViewColumn Header="Преподаватель" DisplayMemberBinding="{Binding Teacher.Name}"/>
+                                    <GridViewColumn Header="Доп. информация" DisplayMemberBinding="{Binding AdditionalInfo}"/>
+                                </GridView>
+                            </ListView.View>
+                        </ListView>
+
+                        <Grid Name="changeEditPanel" Visibility="Collapsed" Grid.Row="2">
+                            <Grid.RowDefinitions>
+                                <RowDefinition/>
+                                <RowDefinition/>
+                                <RowDefinition/>
+                                <RowDefinition/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <Label Grid.Row="0" Grid.Column="0">Дата</Label>
+                            <DatePicker Name="datePicker" FontSize="16" Grid.Row="0" Grid.Column="1"/>
+
+                            <Label Grid.Row="0" Grid.Column="2">Учебная группа</Label>
+                            <ComboBox Name="cbcStudyGroup" ItemsSource="{Binding Model}" IsEditable="True" StaysOpenOnEdit="True"
+                                      SelectedValuePath="Id" DisplayMemberPath="Name" Grid.Row="0" Grid.Column="3"/>
+
+                            <Label Grid.Row="0" Grid.Column="4">Время занятия</Label>
+                            <ComboBox Name="cbcLessonTime" ItemsSource="{Binding Model}" IsEditable="True" StaysOpenOnEdit="True"
+                                      SelectedValuePath="Id" Grid.Row="0" Grid.Column="5"/>
+
+                            <Label Grid.Row="1" Grid.Column="0">Дисциплина</Label>
+                            <ComboBox Name="cbcLesson" ItemsSource="{Binding Model}" IsEditable="True" StaysOpenOnEdit="True"
+                                      SelectedValuePath="Id" DisplayMemberPath="Name" Grid.Row="1" Grid.Column="1"/>
+
+                            <Label Grid.Row="1" Grid.Column="2">Аудитория</Label>
+                            <ComboBox Name="cbcClassroom" ItemsSource="{Binding Model}" IsEditable="True" StaysOpenOnEdit="True"
+                                      SelectedValuePath="Id" DisplayMemberPath="Name" Grid.Row="1" Grid.Column="3"/>
+
+                            <Label Grid.Row="1" Grid.Column="4">Преподаватель</Label>
+                            <ComboBox Name="cbcTeacher" ItemsSource="{Binding Model}" IsEditable="True" StaysOpenOnEdit="True"
+                                      SelectedValuePath="Id" DisplayMemberPath="Name" Grid.Row="1" Grid.Column="5"/>
+
+                            <Label Grid.Row="2" Grid.Column="0">Доп. информация</Label>
+                            <TextBox Name="tbcInfo" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="5"/>
+
+                            <Button Name="bChangeAdd" Content="Добавить" Click="bChangeAdd_Click" IsDefault="True" Grid.Row="3" Grid.Column="5"/>
+                            <Button Name="bChangeEditConfirm" Content="Изменить" Click="bChangeEditConfirm_Click" Visibility="Hidden" Grid.Row="3" Grid.Column="5"/>
+                        </Grid>
+                    </Grid>
+                </TabItem.Content>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</Window>
